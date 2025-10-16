@@ -366,12 +366,13 @@
             
             const segmentMiddle = cumulative + (currentSegments[chosenIndex].size / 2);
             const fullRotations = (4 + Math.floor(Math.random() * 3)) * 360;
-            const targetAngle = (270 - segmentMiddle) % 360;
+            const targetFinalAngle = (270 - segmentMiddle+360) % 360;
             
-            let finalAngle = currentAngle + fullRotations + targetAngle;
-            while (finalAngle <= currentAngle) {
-                finalAngle += 360;
-            }
+            let candidateAngle = targetFinalAngle + fullRotations;
+	    while (candidateAngle <= currentAngle) {
+		candidateAngle += 360;
+	    }
+            const finalAngle = candidateAngle;
 
             // Animate spin
             isSpinning = true;
