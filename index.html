@@ -386,7 +386,11 @@
             console.log(`\n=== Spin ${spinCount} ===`);
             console.log(`Target: ${currentSegments[chosenIndex].label} (index ${chosenIndex})`);
             console.log(`Segment at: ${cumulative}-${cumulative + currentSegments[chosenIndex].size} degrees`);
-            console.log(`Starting from angle: ${startAngle}, going to: ${finalAngle}`);
+            console.log(`Segment middle: ${segmentMiddle} degrees`);
+            console.log(`Current angle: ${currentAngle.toFixed(2)}, normalized: ${(currentAngle % 360).toFixed(2)}`);
+            console.log(`Target final angle (normalized): ${targetFinalAngle.toFixed(2)}`);
+            console.log(`Going to: ${finalAngle.toFixed(2)}`);
+            console.log(`Verification: (${finalAngle.toFixed(2)} + ${segmentMiddle}) % 360 = ${((finalAngle + segmentMiddle) % 360).toFixed(2)} (should be 270)`);
 
             function animate() {
                 const elapsed = Date.now() - startTime;
