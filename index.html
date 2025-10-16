@@ -147,7 +147,7 @@
     </div>
 
     <button class="spin-button" id="spinButton" onclick="spin()">SPIN!</button>
-
+    
     <div class="result-display" id="result"></div>
 
     <div class="sequence-info">
@@ -230,7 +230,7 @@
             if (currentSequenceIndex < sequenceQueue.length) {
                 const current = sequenceQueue[currentSequenceIndex];
                 document.getElementById('sequenceName').textContent = current.name;
-                document.getElementById('spinInfo').textContent =
+                document.getElementById('spinInfo').textContent = 
                     `Spin ${spinCount + 1} of ${current.sequence.length} | Round ${currentSequenceIndex + 1} of ${sequenceQueue.length}`;
             } else {
                 document.getElementById('sequenceName').textContent = 'Random Mode';
@@ -268,15 +268,15 @@
 
         function drawWheel() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+            
             // Start at 0 degrees (segments are positioned from 0)
             let cumulativeAngle = 0;
-
+            
             currentSegments.forEach((segment, i) => {
                 const segmentAngle = segment.size * Math.PI / 180;
                 const startAngle = (currentAngle + cumulativeAngle) * Math.PI / 180;
                 const endAngle = startAngle + segmentAngle;
-
+                
                 // Draw segment
                 ctx.beginPath();
                 ctx.moveTo(centerX, centerY);
@@ -293,7 +293,7 @@
                     const textAngle = startAngle + segmentAngle / 2;
                     const textX = centerX + Math.cos(textAngle) * (radius * 0.65);
                     const textY = centerY + Math.sin(textAngle) * (radius * 0.65);
-
+                    
                     ctx.save();
                     ctx.translate(textX, textY);
                     ctx.fillStyle = '#000';
@@ -303,7 +303,7 @@
                     ctx.fillText(segment.label, 0, 0);
                     ctx.restore();
                 }
-
+                
                 cumulativeAngle += segment.size;
             });
 
@@ -331,20 +331,20 @@
             if (isSpinning) return;
 
             let chosenIndex = 0;
-
+            
             // Check if following sequence
-            if (currentSequenceIndex < sequenceQueue.length &&
+            if (currentSequenceIndex < sequenceQueue.length && 
                 spinCount < sequenceQueue[currentSequenceIndex].sequence.length) {
-
+                
                 const targetLabel = sequenceQueue[currentSequenceIndex].sequence[spinCount];
                 const possibleIndices = findSegmentIndices(targetLabel);
-
+                
                 if (possibleIndices.length > 0) {
                     chosenIndex = possibleIndices[Math.floor(Math.random() * possibleIndices.length)];
                 }
-
+                
                 spinCount++;
-
+                
                 // Check if sequence complete
                 if (spinCount >= sequenceQueue[currentSequenceIndex].sequence.length) {
                     setTimeout(() => {
@@ -363,11 +363,11 @@
             for (let i = 0; i < chosenIndex; i++) {
                 cumulative += currentSegments[i].size;
             }
-
+            
             const segmentMiddle = cumulative + (currentSegments[chosenIndex].size / 2);
             const fullRotations = (4 + Math.floor(Math.random() * 3)) * 360;
             const targetAngle = (270 - segmentMiddle) % 360;
-
+            
             let finalAngle = currentAngle + fullRotations + targetAngle;
             while (finalAngle <= currentAngle) {
                 finalAngle += 360;
@@ -391,26 +391,26 @@
             function animate() {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-
+                
                 // Ease out cubic
                 const eased = 1 - Math.pow(1 - progress, 3);
                 currentAngle = startAngle + (finalAngle - startAngle) * eased;
-
+                
                 drawWheel();
-
+                
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
                     currentAngle = finalAngle % 360;
                     drawWheel();
-
+                    
                     // Determine result - pointer is at 270 degrees (top)
                     const wheelAngle = currentAngle % 360;
                     const segmentAtPointer = (270 - wheelAngle + 360) % 360;
-
+                    
                     console.log(`Final wheel angle: ${wheelAngle}`);
                     console.log(`Segment at pointer (270°): ${segmentAtPointer}`);
-
+                    
                     let cumulativeAngle = 0;
                     let resultIndex = 0;
                     for (let i = 0; i < currentSegments.length; i++) {
@@ -423,37 +423,37 @@
                         }
                         cumulativeAngle = segmentEnd;
                     }
-
+                    
                     const result = currentSegments[resultIndex].label;
                     console.log(`Result: ${result} (index ${resultIndex})`);
                     console.log(`Expected: ${currentSegments[chosenIndex].label}`);
                     console.log(result === currentSegments[chosenIndex].label ? '✓ SUCCESS' : '✗ MISMATCH');
-
+                    
                     document.getElementById('result').textContent = `You Won: ${result}!`;
-
+                    
                     // Handle Jersey
                     if (result === 'Jersey' && jerseyActive) {
                         jerseyWins++;
-                        document.getElementById('jerseyCounter').textContent =
+                        document.getElementById('jerseyCounter').textContent = 
                             `Jerseys Left: ${maxJerseyWins - jerseyWins}`;
-
+                        
                         if (jerseyWins >= maxJerseyWins) {
                             jerseyActive = false;
                             currentSegments = ORIGINAL_SEGMENTS;
                             document.getElementById('jerseyCounter').style.display = 'none';
                         }
                     }
-
+                    
                     createConfetti();
-
+                    
                     isSpinning = false;
                     document.getElementById('spinButton').disabled = false;
                     document.getElementById('spinButton').textContent = 'SPIN AGAIN!';
-
+                    
                     updateSequenceDisplay();
                 }
             }
-
+            
             animate();
         }
 
@@ -468,7 +468,7 @@
                     confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
                     confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
                     document.body.appendChild(confetti);
-
+                    
                     setTimeout(() => confetti.remove(), 3000);
                 }, i * 30);
             }
@@ -480,6 +480,3 @@
     </script>
 </body>
 </html>
-
-
-
