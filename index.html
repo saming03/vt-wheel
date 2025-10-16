@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virginia Tech Wheel of Wonder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #FFFFFF 0%, #6A2C3E 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .title {
+            color: #6A2C3E;
+            font-size: 60px;
+            font-weight: bold;
+            margin-top: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .jersey-counter {
+            color: #6A2C3E;
+            font-size: 24px;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
+        .wheel-container {
+            position: relative;
+            margin: 40px 0;
+        }
+
+        #wheelCanvas {
+            display: block;
+            filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
+        }
+
+        .pointer {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #FF0000;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            z-index: 10;
+        }
+
+        .spin-button {
+            background: #CF4520;
+            color: black;
+            border: 3px solid black;
+            border-radius: 10px;
+            padding: 15px 40px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .spin-button:hover:not(:disabled) {
+            background: #E05530;
+            transform: scale(1.05);
+        }
+
+        .spin-button:disabled {
+            background: #C8C8C8;
+            cursor: not-allowed;
+        }
+
+        .result-display {
+            margin-top: 30px;
+            font-size: 48px;
+            font-weight: bold;
+            color: #CF4520;
+            text-align: center;
+            min-height: 60px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .sequence-info {
+            margin-top: 20px;
+            padding: 15px 30px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .sequence-info h3 {
+            color: #6A2C3E;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .sequence-info p {
+            color: #333;
+            font-size: 18px;
+            margin: 5px 0;
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 20px;
+            background: #6A2C3E;
+            position: absolute;
+            animation: confetti-fall 3s linear forwards;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">Hokies Wheel</h1>
+    <div class="jersey-counter" id="jerseyCounter">Jerseys Left: 5</div>
+
+    <div class="wheel-container">
+        <div class="pointer"></div>
+        <canvas id="wheelCanvas" width="550" height="550"></canvas>
+    </div>
+
+    <button class="spin-button" id="spinButton" onclick="spin()">SPIN!</button>
+
+    <div class="result-display" id="result"></div>
+
+    <div class="sequence-info">
+        <h3 id="sequenceName">Ready to Spin</h3>
+        <p id="spinInfo">Click SPIN to start!</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = 250;
+
+        let currentAngle = 0;
+        let isSpinning = false;
+        let jerseyWins = 0;
+        let maxJerseyWins = 5;
+        let jerseyActive = true;
+
+        // Sequence management
+        let sequenceQueue = [];
+        let currentSequenceIndex = 0;
+        let spinCount = 0;
+
+        // Define sequences
+        const sequence1 = [
+            "Buttons", "Wristbands", "Shakers", "Stickers", "Jersey",
+            "Stickers", "Buttons", "Wristbands", "Jersey", "Stickers",
+            "Shakers", "Wristbands", "Wristbands", "Buttons", "Jersey",
+            "Stickers", "Shakers", "Shakers", "Buttons", "Jersey",
+            "Wristbands", "Buttons", "Stickers", "Jersey", "Shakers"
+        ];
+
+        const sequence2 = [
+            "Buttons", "Wristbands", "Shakers", "Stickers", "Jersey",
+            "Stickers", "Buttons", "Wristbands", "Jersey", "Stickers",
+            "Shakers", "Wristbands", "Wristbands", "Buttons", "Grand Prize",
+            "Stickers", "Shakers", "Shakers", "Buttons", "Jersey",
+            "Wristbands", "Buttons", "Stickers", "Jersey", "Shakers"
+        ];
+
+        const sequence3 = [
+            "Stickers", "Buttons", "Shakers", "Wristbands", "Buttons",
+            "Stickers", "Shakers", "Wristbands", "Buttons", "Wristbands",
+            "Shakers", "Stickers", "Stickers", "Buttons", "Wristbands",
+            "Shakers", "Wristbands", "Buttons", "Stickers", "Wristbands",
+            "Shakers", "Buttons", "Stickers", "Shakers", "Wristbands"
+        ];
+
+        // Build sequence queue: 1x Seq1, 10x Seq3, 1x Seq2, then 12x Seq3
+        function initializeSequences() {
+            sequenceQueue = [];
+            let roundNum = 1;
+
+            // 1x Sequence 1
+            sequenceQueue.push({sequence: [...sequence1], name: `Round ${roundNum}`});
+            roundNum++;
+
+            // 10x Sequence 3
+            for (let i = 0; i < 10; i++) {
+                sequenceQueue.push({sequence: [...sequence3], name: `Round ${roundNum}`});
+                roundNum++;
+            }
+
+            // 1x Sequence 2 (Grand Prize)
+            sequenceQueue.push({sequence: [...sequence2], name: `Round ${roundNum} - GRAND PRIZE ROUND!`});
+            roundNum++;
+
+            // 12x Sequence 3
+            for (let i = 0; i < 12; i++) {
+                sequenceQueue.push({sequence: [...sequence3], name: `Round ${roundNum}`});
+                roundNum++;
+            }
+
+            updateSequenceDisplay();
+        }
+
+        function updateSequenceDisplay() {
+            if (currentSequenceIndex < sequenceQueue.length) {
+                const current = sequenceQueue[currentSequenceIndex];
+                document.getElementById('sequenceName').textContent = current.name;
+                document.getElementById('spinInfo').textContent =
+                    `Spin ${spinCount + 1} of ${current.sequence.length} | Round ${currentSequenceIndex + 1} of ${sequenceQueue.length}`;
+            } else {
+                document.getElementById('sequenceName').textContent = 'Random Mode';
+                document.getElementById('spinInfo').textContent = 'All sequences complete!';
+            }
+        }
+
+        // Wheel configurations
+        const JERSEY_SEGMENTS = [
+            {label: "Grand Prize", color: "#FFD700", size: 15},
+            {label: "Jersey", color: "#FFFFFF", size: 39.6},
+            {label: "Wristbands", color: "#6A2C3E", size: 38.55},
+            {label: "Shakers", color: "#CF4520", size: 38.55},
+            {label: "Stickers", color: "#FFFFFF", size: 38.55},
+            {label: "Buttons", color: "#6A2C3E", size: 38.55},
+            {label: "Wristbands", color: "#CF4520", size: 38.55},
+            {label: "Shakers", color: "#FFFFFF", size: 38.55},
+            {label: "Stickers", color: "#6A2C3E", size: 38.55},
+            {label: "Buttons", color: "#CF4520", size: 38.55}
+        ];
+
+        const ORIGINAL_SEGMENTS = [
+            {label: "Grand Prize", color: "#FFD700", size: 15},
+            {label: "Wristbands", color: "#6A2C3E", size: 43.125},
+            {label: "Shakers", color: "#CF4520", size: 43.125},
+            {label: "Stickers", color: "#FFFFFF", size: 43.125},
+            {label: "Buttons", color: "#6A2C3E", size: 43.125},
+            {label: "Wristbands", color: "#CF4520", size: 43.125},
+            {label: "Shakers", color: "#FFFFFF", size: 43.125},
+            {label: "Stickers", color: "#6A2C3E", size: 43.125},
+            {label: "Buttons", color: "#CF4520", size: 43.125}
+        ];
+
+        let currentSegments = JERSEY_SEGMENTS;
+
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Start at 0 degrees (segments are positioned from 0)
+            let cumulativeAngle = 0;
+
+            currentSegments.forEach((segment, i) => {
+                const segmentAngle = segment.size * Math.PI / 180;
+                const startAngle = (currentAngle + cumulativeAngle) * Math.PI / 180;
+                const endAngle = startAngle + segmentAngle;
+
+                // Draw segment
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = segment.color;
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw text
+                if (segment.size > 10) {
+                    const textAngle = startAngle + segmentAngle / 2;
+                    const textX = centerX + Math.cos(textAngle) * (radius * 0.65);
+                    const textY = centerY + Math.sin(textAngle) * (radius * 0.65);
+
+                    ctx.save();
+                    ctx.translate(textX, textY);
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(segment.label, 0, 0);
+                    ctx.restore();
+                }
+
+                cumulativeAngle += segment.size;
+            });
+
+            // Draw center circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
+            ctx.fillStyle = '#FFF';
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+        function findSegmentIndices(targetLabel) {
+            const indices = [];
+            currentSegments.forEach((seg, i) => {
+                if (seg.label === targetLabel) {
+                    indices.push(i);
+                }
+            });
+            return indices;
+        }
+
+        function spin() {
+            if (isSpinning) return;
+
+            let chosenIndex = 0;
+
+            // Check if following sequence
+            if (currentSequenceIndex < sequenceQueue.length &&
+                spinCount < sequenceQueue[currentSequenceIndex].sequence.length) {
+
+                const targetLabel = sequenceQueue[currentSequenceIndex].sequence[spinCount];
+                const possibleIndices = findSegmentIndices(targetLabel);
+
+                if (possibleIndices.length > 0) {
+                    chosenIndex = possibleIndices[Math.floor(Math.random() * possibleIndices.length)];
+                }
+
+                spinCount++;
+
+                // Check if sequence complete
+                if (spinCount >= sequenceQueue[currentSequenceIndex].sequence.length) {
+                    setTimeout(() => {
+                        currentSequenceIndex++;
+                        spinCount = 0;
+                        updateSequenceDisplay();
+                    }, 4000);
+                }
+            } else {
+                // Random spin
+                chosenIndex = Math.floor(Math.random() * currentSegments.length);
+            }
+
+            // Calculate target angle
+            let cumulative = 0;
+            for (let i = 0; i < chosenIndex; i++) {
+                cumulative += currentSegments[i].size;
+            }
+
+            const segmentMiddle = cumulative + (currentSegments[chosenIndex].size / 2);
+            const fullRotations = (4 + Math.floor(Math.random() * 3)) * 360;
+            const targetAngle = (270 - segmentMiddle) % 360;
+
+            let finalAngle = currentAngle + fullRotations + targetAngle;
+            while (finalAngle <= currentAngle) {
+                finalAngle += 360;
+            }
+
+            // Animate spin
+            isSpinning = true;
+            document.getElementById('spinButton').disabled = true;
+            document.getElementById('spinButton').textContent = 'SPINNING...';
+            document.getElementById('result').textContent = '';
+
+            const duration = 4000;
+            const startTime = Date.now();
+            const startAngle = currentAngle;
+
+            console.log(`\n=== Spin ${spinCount} ===`);
+            console.log(`Target: ${currentSegments[chosenIndex].label} (index ${chosenIndex})`);
+            console.log(`Segment at: ${cumulative}-${cumulative + currentSegments[chosenIndex].size} degrees`);
+            console.log(`Starting from angle: ${startAngle}, going to: ${finalAngle}`);
+
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                // Ease out cubic
+                const eased = 1 - Math.pow(1 - progress, 3);
+                currentAngle = startAngle + (finalAngle - startAngle) * eased;
+
+                drawWheel();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    currentAngle = finalAngle % 360;
+                    drawWheel();
+
+                    // Determine result - pointer is at 270 degrees (top)
+                    const wheelAngle = currentAngle % 360;
+                    const segmentAtPointer = (270 - wheelAngle + 360) % 360;
+
+                    console.log(`Final wheel angle: ${wheelAngle}`);
+                    console.log(`Segment at pointer (270°): ${segmentAtPointer}`);
+
+                    let cumulativeAngle = 0;
+                    let resultIndex = 0;
+                    for (let i = 0; i < currentSegments.length; i++) {
+                        const segmentEnd = cumulativeAngle + currentSegments[i].size;
+                        console.log(`  Checking index ${i} (${currentSegments[i].label}): ${cumulativeAngle}-${segmentEnd}`);
+                        if (cumulativeAngle <= segmentAtPointer && segmentAtPointer < segmentEnd) {
+                            resultIndex = i;
+                            console.log(`  ^ MATCH!`);
+                            break;
+                        }
+                        cumulativeAngle = segmentEnd;
+                    }
+
+                    const result = currentSegments[resultIndex].label;
+                    console.log(`Result: ${result} (index ${resultIndex})`);
+                    console.log(`Expected: ${currentSegments[chosenIndex].label}`);
+                    console.log(result === currentSegments[chosenIndex].label ? '✓ SUCCESS' : '✗ MISMATCH');
+
+                    document.getElementById('result').textContent = `You Won: ${result}!`;
+
+                    // Handle Jersey
+                    if (result === 'Jersey' && jerseyActive) {
+                        jerseyWins++;
+                        document.getElementById('jerseyCounter').textContent =
+                            `Jerseys Left: ${maxJerseyWins - jerseyWins}`;
+
+                        if (jerseyWins >= maxJerseyWins) {
+                            jerseyActive = false;
+                            currentSegments = ORIGINAL_SEGMENTS;
+                            document.getElementById('jerseyCounter').style.display = 'none';
+                        }
+                    }
+
+                    createConfetti();
+
+                    isSpinning = false;
+                    document.getElementById('spinButton').disabled = false;
+                    document.getElementById('spinButton').textContent = 'SPIN AGAIN!';
+
+                    updateSequenceDisplay();
+                }
+            }
+
+            animate();
+        }
+
+        function createConfetti() {
+            const colors = ['#6A2C3E', '#CF4520'];
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * window.innerWidth + 'px';
+                    confetti.style.top = '-20px';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    document.body.appendChild(confetti);
+
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 30);
+            }
+        }
+
+        // Initialize
+        initializeSequences();
+        drawWheel();
+    </script>
+</body>
+</html>
+
+
+
